@@ -12,9 +12,10 @@ jobs:
           mv armv7-eabihf--uclibc--stable-2018.02-1 toolchain
       - name: Build libnl static
         run: |
-          curl -L -o libnl.tar.gz "https://github.com/thom311/libnl/releases/download/libnl3_2_0/libnl-3.2.25.tar.gz"
+          curl -L -o libnl.tar.gz "https://github.com/thom311/libnl/archive/refs/tags/libnl3_2_25.tar.gz"
           tar xzf libnl.tar.gz
-          cd libnl-3.2.25
+          cd libnl-libnl3_2_25
+          ./autogen.sh 2>/dev/null
           TOOL="$GITHUB_WORKSPACE/toolchain/bin/arm-buildroot-linux-uclibcgnueabihf"
           ./configure --host=arm-linux --prefix=/tmp/nl --enable-static --disable-shared \
             CC=${TOOL}-gcc AR=${TOOL}-ar RANLIB=${TOOL}-ranlib CFLAGS="-Os"
