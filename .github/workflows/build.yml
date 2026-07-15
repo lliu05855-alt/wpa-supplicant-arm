@@ -9,9 +9,9 @@ jobs:
         run: |
           sudo apt-get install -y -qq libmpfr-dev automake autoconf libtool pkg-config
           sudo ln -sf /usr/lib/x86_64-linux-gnu/libmpfr.so.6 /usr/lib/x86_64-linux-gnu/libmpfr.so.4
-          curl -sL -o tc.tar.bz2 "https://toolchains.bootlin.com/downloads/releases/toolchains/armv7-eabihf/tarballs/armv7-eabihf--uclibc--stable-2018.02-1.tar.bz2"
+          curl -sL -o tc.tar.bz2 "https://toolchains.bootlin.com/downloads/releases/toolchains/armv5-eabi/tarballs/armv5-eabi--uclibc--stable-2018.02-1.tar.bz2"
           tar xf tc.tar.bz2 2>/dev/null
-          mv armv7-eabihf--uclibc--stable-2018.02-1 tc
+          mv armv5-eabi--uclibc--stable-2018.02-1 tc
       - name: Build libnl
         run: |
           export PATH="$PWD/tc/bin:$PATH"
@@ -19,12 +19,12 @@ jobs:
           tar xzf libnl.tar.gz
           cd libnl-libnl3_2_25
           ./autogen.sh 2>/dev/null
-          ./configure --host=arm-buildroot-linux-uclibcgnueabihf --prefix=/tmp/nl \
+          ./configure --host=arm-buildroot-linux-uclibcgnueabi --prefix=/tmp/nl \
             --enable-static --disable-shared \
-            CC=arm-buildroot-linux-uclibcgnueabihf-gcc \
-            AR=arm-buildroot-linux-uclibcgnueabihf-ar \
-            RANLIB=arm-buildroot-linux-uclibcgnueabihf-ranlib \
-            CFLAGS="-Os -mfloat-abi=soft" 2>&1 | tail -5
+            CC=arm-buildroot-linux-uclibcgnueabi-gcc \
+            AR=arm-buildroot-linux-uclibcgnueabi-ar \
+            RANLIB=arm-buildroot-linux-uclibcgnueabi-ranlib \
+            CFLAGS="-Os" 2>&1 | tail -5
           make -j$(nproc) 2>&1 | tail -3
           make install 2>&1 | tail -3
           ls /tmp/nl/lib/ /tmp/nl/include/libnl3/netlink/
@@ -45,13 +45,13 @@ jobs:
           CONFIG_TLSV12=y
           CONFIG_DEBUG_LEVEL=0
           CONFIG_NO_STDOUT_DEBUG=y
-          CFLAGS += -I/tmp/nl/include/libnl3 -mfloat-abi=soft
+          CFLAGS += -I/tmp/nl/include/libnl3
           LIBS += -L/tmp/nl/lib -lnl-3 -lnl-genl-3
           EOF
           make -j$(nproc) \
-            CC=arm-buildroot-linux-uclibcgnueabihf-gcc \
+            CC=arm-buildroot-linux-uclibcgnueabi-gcc \
             LDFLAGS="-static -lpthread -lm" 2>&1 | tail -5
-          arm-buildroot-linux-uclibcgnueabihf-strip wpa_supplicant
+          arm-buildroot-linux-uclibcgnueabi-strip wpa_supplicant
           ls -lh wpa_supplicant
           file wpa_supplicant
       - uses: actions/upload-artifact@v4
