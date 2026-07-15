@@ -34,7 +34,7 @@ jobs:
             CC=arm-buildroot-linux-uclibcgnueabihf-gcc \
             LDFLAGS="-static" \
             LIBS="-L${SYSROOT}/usr/lib -lnl-3 -lnl-genl-3 -lpthread -lm" \
-            CFLAGS="-I${SYSROOT}/usr/include/libnl3 -I. -I../src -Os -DCONFIG_LIBNL20 -DCONFIG_CTRL_IFACE_UNIX" 2>&1 | tail -15
+            EXTRA_CFLAGS="-I${SYSROOT}/usr/include/libnl3 -Os" 2>&1 | tail -15
           arm-buildroot-linux-uclibcgnueabihf-strip wpa_supplicant 2>/dev/null || true
           ls -lh wpa_supplicant 2>/dev/null || echo "BUILD FAILED"
           file wpa_supplicant 2>/dev/null
