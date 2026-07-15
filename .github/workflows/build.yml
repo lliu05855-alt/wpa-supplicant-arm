@@ -1,4 +1,4 @@
-name: Build wpa_supplicant for ARM uClibc
+name: Build wpa_supplicant ARM uClibc
 on: [push, workflow_dispatch]
 jobs:
   build:
@@ -7,16 +7,32 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup
         run: |
-          sudo apt-get install -y -qq libmpfr-dev && sudo ln -sf /usr/lib/x86_64-linux-gnu/libmpfr.so.6 /usr/lib/x86_64-linux-gnu/libmpfr.so.4 2>/dev/null; true
+          sudo apt-get install -y -qq libmpfr-dev automake autoconf libtool pkg-config
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/libmpfr.so.6 /usr/lib/x86_64-linux-gnu/libmpfr.so.4
           curl -sL -o tc.tar.bz2 "https://toolchains.bootlin.com/downloads/releases/toolchains/armv7-eabihf/tarballs/armv7-eabihf--uclibc--stable-2018.02-1.tar.bz2"
           tar xf tc.tar.bz2 2>/dev/null
           mv armv7-eabihf--uclibc--stable-2018.02-1 tc
-          curl -sL -o wpa.tar.gz "https://w1.fi/releases/wpa_supplicant-2.10.tar.gz"
-          tar xzf wpa.tar.gz
-      - name: Build
+      - name: Build libnl
         run: |
           export PATH="$PWD/tc/bin:$PATH"
-          SYSROOT="$PWD/tc/arm-buildroot-linux-uclibcgnueabihf/sysroot"
+          curl -sL -o libnl.tar.gz "https://github.com/thom311/libnl/archive/refs/tags/libnl3_2_25.tar.gz"
+          tar xzf libnl.tar.gz
+          cd libnl-libnl3_2_25
+          ./autogen.sh 2>/dev/null
+          ./configure --host=arm-buildroot-linux-uclibcgnueabihf --prefix=/tmp/nl \
+            --enable-static --disable-shared \
+            CC=arm-buildroot-linux-uclibcgnueabihf-gcc \
+            AR=arm-buildroot-linux-uclibcgnueabihf-ar \
+            RANLIB=arm-buildroot-linux-uclibcgnueabihf-ranlib \
+            CFLAGS="-Os" 2>&1 | tail -5
+          make -j$(nproc) 2>&1 | tail -3
+          make install 2>&1 | tail -3
+          ls /tmp/nl/lib/ /tmp/nl/include/libnl3/netlink/
+      - name: Build wpa_supplicant
+        run: |
+          export PATH="$PWD/tc/bin:$PATH"
+          curl -sL -o wpa.tar.gz "https://w1.fi/releases/wpa_supplicant-2.10.tar.gz"
+          tar xzf wpa.tar.gz
           cd wpa_supplicant-2.10/wpa_supplicant
           cat > .config << 'EOF'
           CONFIG_DRIVER_NL80211=y
@@ -29,16 +45,16 @@ jobs:
           CONFIG_TLSV12=y
           CONFIG_DEBUG_LEVEL=0
           CONFIG_NO_STDOUT_DEBUG=y
+          CFLAGS += -I/tmp/nl/include/libnl3
+          LIBS += -L/tmp/nl/lib -lnl-3 -lnl-genl-3
           EOF
           make -j$(nproc) \
             CC=arm-buildroot-linux-uclibcgnueabihf-gcc \
-            LDFLAGS="-static" \
-            LIBS="-L${SYSROOT}/usr/lib -lnl-3 -lnl-genl-3 -lpthread -lm" \
-            EXTRA_CFLAGS="-I${SYSROOT}/usr/include/libnl3 -Os" 2>&1 | tail -15
-          arm-buildroot-linux-uclibcgnueabihf-strip wpa_supplicant 2>/dev/null || true
-          ls -lh wpa_supplicant 2>/dev/null || echo "BUILD FAILED"
-          file wpa_supplicant 2>/dev/null
+            LDFLAGS="-static -lpthread -lm" 2>&1 | tail -5
+          arm-buildroot-linux-uclibcgnueabihf-strip wpa_supplicant
+          ls -lh wpa_supplicant
+          file wpa_supplicant
       - uses: actions/upload-artifact@v4
         with:
-          name: wpa_supplicant-arm-uclibc
+          name: wpa_supplicant
           path: wpa_supplicant-2.10/wpa_supplicant/wpa_supplicant
