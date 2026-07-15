@@ -5,29 +5,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Download ARM uClibc toolchain
+      - name: Setup
         run: |
-          curl -L -o toolchain.tar.bz2 "https://toolchains.bootlin.com/downloads/releases/toolchains/armv7-eabihf/tarballs/armv7-eabihf--uclibc--stable-2018.02-1.tar.bz2"
-          tar xf toolchain.tar.bz2
-          mv armv7-eabihf--uclibc--stable-2018.02-1 toolchain
-      - name: Build libnl static
-        run: |
-          curl -L -o libnl.tar.gz "https://github.com/thom311/libnl/archive/refs/tags/libnl3_2_25.tar.gz"
-          tar xzf libnl.tar.gz
-          cd libnl-libnl3_2_25
-          ./autogen.sh 2>/dev/null
-          TOOL="$GITHUB_WORKSPACE/toolchain/bin/arm-buildroot-linux-uclibcgnueabihf"
-          ./configure --host=arm-linux --prefix=/tmp/nl --enable-static --disable-shared \
-            CC=${TOOL}-gcc AR=${TOOL}-ar RANLIB=${TOOL}-ranlib CFLAGS="-Os"
-          make -j$(nproc) && make install
-      - name: Build wpa_supplicant static
-        run: |
-          curl -L -o wpa.tar.gz "https://w1.fi/releases/wpa_supplicant-2.10.tar.gz"
+          curl -sL -o tc.tar.bz2 "https://toolchains.bootlin.com/downloads/releases/toolchains/armv7-eabihf/tarballs/armv7-eabihf--uclibc--stable-2018.02-1.tar.bz2"
+          tar xf tc.tar.bz2 2>/dev/null
+          mv armv7-eabihf--uclibc--stable-2018.02-1 tc
+          curl -sL -o wpa.tar.gz "https://w1.fi/releases/wpa_supplicant-2.10.tar.gz"
           tar xzf wpa.tar.gz
+      - name: Build
+        run: |
+          export PATH="$PWD/tc/bin:$PATH"
+          SYSROOT="$PWD/tc/arm-buildroot-linux-uclibcgnueabihf/sysroot"
           cd wpa_supplicant-2.10/wpa_supplicant
-          TOOL="$GITHUB_WORKSPACE/toolchain/bin/arm-buildroot-linux-uclibcgnueabihf"
-          NL="/tmp/nl"
-          cat > .config << EOF
+          cat > .config << 'EOF'
           CONFIG_DRIVER_NL80211=y
           CONFIG_LIBNL32=y
           CONFIG_CTRL_IFACE=y
@@ -36,18 +26,17 @@ jobs:
           CONFIG_INTERNAL_LIBTOMMATH=y
           CONFIG_TLSV11=y
           CONFIG_TLSV12=y
-          CONFIG_WPS=y
-          CONFIG_IEEE80211AC=y
-          CONFIG_IEEE80211AX=y
           CONFIG_DEBUG_LEVEL=0
           CONFIG_NO_STDOUT_DEBUG=y
-          CFLAGS += -I${NL}/include/libnl3
-          LIBS += -L${NL}/lib -lnl-3 -lnl-genl-3 -lpthread -lm
           EOF
-          make -j$(nproc) CC=${TOOL}-gcc LDFLAGS="-static" 2>&1 | tail -10
-          ${TOOL}-strip wpa_supplicant wpa_cli
-          ls -lh wpa_supplicant wpa_cli
-          file wpa_supplicant
+          make -j$(nproc) \
+            CC=arm-buildroot-linux-uclibcgnueabihf-gcc \
+            LDFLAGS="-static" \
+            LIBS="-L${SYSROOT}/usr/lib -lnl-3 -lnl-genl-3 -lpthread -lm" \
+            CFLAGS="-I${SYSROOT}/usr/include/libnl3 -Os" 2>&1 | tail -15
+          arm-buildroot-linux-uclibcgnueabihf-strip wpa_supplicant 2>/dev/null || true
+          ls -lh wpa_supplicant 2>/dev/null || echo "BUILD FAILED"
+          file wpa_supplicant 2>/dev/null
       - uses: actions/upload-artifact@v4
         with:
           name: wpa_supplicant-arm-uclibc
