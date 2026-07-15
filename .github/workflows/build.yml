@@ -24,7 +24,7 @@ jobs:
             CC=arm-buildroot-linux-uclibcgnueabihf-gcc \
             AR=arm-buildroot-linux-uclibcgnueabihf-ar \
             RANLIB=arm-buildroot-linux-uclibcgnueabihf-ranlib \
-            CFLAGS="-Os" 2>&1 | tail -5
+            CFLAGS="-Os -mfloat-abi=soft" 2>&1 | tail -5
           make -j$(nproc) 2>&1 | tail -3
           make install 2>&1 | tail -3
           ls /tmp/nl/lib/ /tmp/nl/include/libnl3/netlink/
@@ -45,7 +45,7 @@ jobs:
           CONFIG_TLSV12=y
           CONFIG_DEBUG_LEVEL=0
           CONFIG_NO_STDOUT_DEBUG=y
-          CFLAGS += -I/tmp/nl/include/libnl3
+          CFLAGS += -I/tmp/nl/include/libnl3 -mfloat-abi=soft
           LIBS += -L/tmp/nl/lib -lnl-3 -lnl-genl-3
           EOF
           make -j$(nproc) \
