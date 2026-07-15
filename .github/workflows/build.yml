@@ -51,10 +51,12 @@ jobs:
           make -j$(nproc) \
             CC=arm-buildroot-linux-uclibcgnueabi-gcc \
             LDFLAGS="-static -lpthread -lm" 2>&1 | tail -5
-          arm-buildroot-linux-uclibcgnueabi-strip wpa_supplicant
-          ls -lh wpa_supplicant
+          arm-buildroot-linux-uclibcgnueabi-strip wpa_supplicant wpa_cli
+          ls -lh wpa_supplicant wpa_cli
           file wpa_supplicant
       - uses: actions/upload-artifact@v4
         with:
           name: wpa_supplicant
-          path: wpa_supplicant-2.10/wpa_supplicant/wpa_supplicant
+          path: |
+            wpa_supplicant-2.10/wpa_supplicant/wpa_supplicant
+            wpa_supplicant-2.10/wpa_supplicant/wpa_cli
